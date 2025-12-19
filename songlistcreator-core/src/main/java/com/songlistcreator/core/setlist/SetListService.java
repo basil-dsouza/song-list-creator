@@ -8,6 +8,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
+import lombok.extern.slf4j.Slf4j;
+
+@Slf4j
 @RequiredArgsConstructor
 public class SetListService {
 
@@ -19,7 +22,9 @@ public class SetListService {
         if (setList.getSongs() == null) {
             setList.setSongs(new ArrayList<>());
         }
-        return setListRepository.save(setList);
+        SetList saved = setListRepository.save(setList);
+        log.info("Created SetList [ID={}, Name='{}', User='{}']", saved.getId(), saved.getName(), userId);
+        return saved;
     }
 
     public Optional<SetList> getSetList(Long id) {
@@ -32,6 +37,7 @@ public class SetListService {
 
     public void deleteSetList(Long id) {
         setListRepository.deleteById(id);
+        log.info("Deleted SetList [ID={}]", id);
     }
 
     public Optional<SetList> updateSetList(Long id, SetList updated, String userId) {
@@ -43,7 +49,9 @@ public class SetListService {
                     if (updated.getSongs() != null) {
                         existing.setSongs(updated.getSongs());
                     }
-                    return setListRepository.save(existing);
+                    SetList saved = setListRepository.save(existing);
+                    log.info("Updated SetList [ID={}, Name='{}', User='{}']", saved.getId(), saved.getName(), userId);
+                    return saved;
                 });
     }
 
@@ -62,6 +70,8 @@ public class SetListService {
 
                         if (!exists) {
                             setList.getSongs().add(new SetListEntry(songId, 0));
+                            log.info("Added Song [SongID={}] to SetList [SetListID={}, User='{}']", songId, setListId,
+                                    userId);
                         }
                     });
                     return setListRepository.save(setList);
@@ -73,7 +83,11 @@ public class SetListService {
                 .filter(sl -> sl.getUserId().equals(userId))
                 .map(setList -> {
                     if (setList.getSongs() != null) {
-                        setList.getSongs().removeIf(entry -> entry.getSongId().equals(songId));
+                        boolean removed = setList.getSongs().removeIf(entry -> entry.getSongId().equals(songId));
+                        if (removed) {
+                            log.info("Removed Song [SongID={}] from SetList [SetListID={}, User='{}']", songId,
+                                    setListId, userId);
+                        }
                     }
                     return setListRepository.save(setList);
                 });

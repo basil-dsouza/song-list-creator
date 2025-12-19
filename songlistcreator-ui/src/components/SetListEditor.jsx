@@ -54,24 +54,29 @@ function SetListEditor() {
         }
 
         try {
+            console.log(`[SetListEditor] Saving setlist: ${name} (ID: ${id || 'New'})`)
             if (id) {
                 await axios.put(`/api/setlists/${id}`, setListData)
+                console.log(`[SetListEditor] Updated setlist ${id}`)
             } else {
-                await axios.post('/api/setlists', setListData)
+                const res = await axios.post('/api/setlists', setListData)
+                console.log(`[SetListEditor] Created setlist ${res.data.id}`)
             }
             navigate('/setlists')
         } catch (error) {
-            console.error('Error saving setlist:', error)
+            console.error('[SetListEditor] Error saving setlist:', error)
         }
     }
 
     const handleDelete = async () => {
         if (!window.confirm('Are you sure you want to delete this set list?')) return
         try {
+            console.log(`[SetListEditor] Deleting setlist ${id}`)
             await axios.delete(`/api/setlists/${id}`)
+            console.log(`[SetListEditor] Deleted setlist ${id}`)
             navigate('/setlists')
         } catch (error) {
-            console.error('Error deleting setlist:', error)
+            console.error('[SetListEditor] Error deleting setlist:', error)
         }
     }
 

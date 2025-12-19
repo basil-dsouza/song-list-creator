@@ -7,6 +7,9 @@ import java.util.Date;
 import java.util.List;
 import java.util.Optional;
 
+import lombok.extern.slf4j.Slf4j;
+
+@Slf4j
 public class SongService {
 
     private final SongRepository songRepository;
@@ -21,7 +24,9 @@ public class SongService {
         song.setUserId(userId);
         song.setCreated(new Date());
         song.setModified(new Date());
-        return songRepository.save(song);
+        Song saved = songRepository.save(song);
+        log.info("Created Song [ID={}, Name='{}', User='{}']", saved.getId(), saved.getTitle(), userId);
+        return saved;
     }
 
     public Optional<Song> updateSong(Long id, Song song, String userId) {
@@ -32,7 +37,9 @@ public class SongService {
                     song.setUserId(userId);
                     song.setCreated(existing.getCreated());
                     song.setModified(new Date());
-                    return songRepository.save(song);
+                    Song saved = songRepository.save(song);
+                    log.info("Updated Song [ID={}, Name='{}', User='{}']", saved.getId(), saved.getTitle(), userId);
+                    return saved;
                 });
     }
 
@@ -50,6 +57,7 @@ public class SongService {
 
     public void deleteSong(Long id) {
         songRepository.deleteById(id);
+        log.info("Deleted Song [ID={}]", id);
     }
 
     public Optional<Song> getTransposedSong(Long id, int semitones) {

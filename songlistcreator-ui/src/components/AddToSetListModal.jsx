@@ -27,13 +27,15 @@ function AddToSetListModal({ songId, onClose }) {
         setAddingTo(setListId)
         setMessage(null)
         try {
+            console.log(`[AddToSetListModal] Adding song ${songId} to setlist ${setListId}`)
             await axios.post(`/api/setlists/${setListId}/songs/${songId}`)
+            console.log(`[AddToSetListModal] Added song ${songId} to setlist ${setListId}`)
             setMessage({ type: 'success', text: `Added to ${setListName}!` })
             setTimeout(() => {
                 onClose()
             }, 1000)
         } catch (error) {
-            console.error(error)
+            console.error('[AddToSetListModal] Error adding song:', error)
             setMessage({ type: 'error', text: 'Failed to add song.' })
             setAddingTo(null)
         }

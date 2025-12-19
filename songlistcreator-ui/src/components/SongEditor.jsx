@@ -49,14 +49,17 @@ function SongEditor() {
         }
 
         try {
+            console.log(`[SongEditor] Saving song: ${formData.title} (ID: ${id || 'New'})`)
             if (id) {
                 await axios.put(`/api/songs/${id}`, payload)
+                console.log(`[SongEditor] Updated song ${id}`)
             } else {
-                await axios.post('/api/songs', payload)
+                const res = await axios.post('/api/songs', payload)
+                console.log(`[SongEditor] Created song ${res.data.id}`)
             }
             navigate('/')
         } catch (err) {
-            console.error(err)
+            console.error('[SongEditor] Error saving song:', err)
         }
     }
 

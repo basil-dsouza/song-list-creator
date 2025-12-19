@@ -37,8 +37,14 @@ function SongViewer() {
 
     const handleDelete = async () => {
         if (confirm('Are you sure you want to delete this song?')) {
-            await axios.delete(`/api/songs/${id}`)
-            navigate('/')
+            try {
+                console.log(`[SongViewer] Deleting song ${id}`)
+                await axios.delete(`/api/songs/${id}`)
+                console.log(`[SongViewer] Deleted song ${id}`)
+                navigate('/')
+            } catch (error) {
+                console.error('[SongViewer] Error deleting song:', error)
+            }
         }
     }
 

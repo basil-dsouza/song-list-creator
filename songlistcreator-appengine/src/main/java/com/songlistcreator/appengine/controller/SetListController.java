@@ -9,7 +9,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/setlists")
+@RequestMapping("/api/setlists") // Keep API prefix explicit
 @RequiredArgsConstructor
 public class SetListController {
 

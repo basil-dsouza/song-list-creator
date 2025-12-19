@@ -7,6 +7,7 @@ import SongViewer from './components/SongViewer'
 import SetListList from './components/SetListList'
 import SetListEditor from './components/SetListEditor'
 import SetListViewer from './components/SetListViewer'
+import DebugTools from './components/DebugTools'
 
 // Configure Axios base URL
 axios.defaults.baseURL = 'http://localhost:8080';
@@ -33,6 +34,7 @@ function App() {
           <div className="space-x-4">
             <Link to="/" className="hover:text-indigo-300 transition-colors">Songs</Link>
             <Link to="/setlists" className="hover:text-indigo-300 transition-colors">Set Lists</Link>
+            <Link to="/debug" className="hover:text-red-300 transition-colors font-mono text-sm border border-red-500/30 px-2 py-1 rounded bg-red-500/10">Debug</Link>
             <Link to="/new" className="btn-primary">New Song</Link>
           </div>
         </nav>
@@ -46,6 +48,7 @@ function App() {
           <Route path="/setlists/new" element={<SetListEditor />} />
           <Route path="/setlists/:id" element={<SetListViewer />} />
           <Route path="/setlists/:id/edit" element={<SetListEditor />} />
+          <Route path="/debug" element={<DebugTools />} />
         </Routes>
       </div>
     </Router>

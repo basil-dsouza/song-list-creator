@@ -14,5 +14,5 @@ public class SetList {
     private Long id;
     private String userId; // Owner
     private String name;
-    private List<Long> songIds;
+    private List<SetListEntry> songs;
 }

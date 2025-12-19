@@ -60,8 +60,27 @@ public class SetListController {
                 .orElse(ResponseEntity.notFound().build());
     }
 
+    @PutMapping("/{id}/songs/{songId}")
+    public ResponseEntity<SetList> updateSong(@PathVariable Long id, @PathVariable Long songId,
+            @RequestBody com.songlistcreator.core.setlist.SetListEntry entry) {
+        // We only care about transposition from the body
+        return setListService.getSetList(id)
+                .filter(sl -> sl.getUserId().equals(DEFAULT_USER_ID))
+                .map(setList -> {
+                    if (setList.getSongs() != null) {
+                        setList.getSongs().stream()
+                                .filter(e -> e.getSongId().equals(songId))
+                                .findFirst()
+                                .ifPresent(e -> e.setTransposition(entry.getTransposition()));
+                        setListService.updateSetList(id, setList, DEFAULT_USER_ID);
+                    }
+                    return ResponseEntity.ok(setList);
+                })
+                .orElse(ResponseEntity.notFound().build());
+    }
+
     @GetMapping("/{id}/songs")
-    public List<com.songlistcreator.core.song.Song> getSongsInSetList(@PathVariable Long id) {
+    public List<SetListService.SetListSongDTO> getSongsInSetList(@PathVariable Long id) {
         return setListService.getSongsInSetList(id);
     }
 }

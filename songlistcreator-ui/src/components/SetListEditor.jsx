@@ -1,13 +1,13 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import axios from 'axios'
+import SongSelectionList from './SongSelectionList'
 
 function SetListEditor() {
     const { id } = useParams()
     const navigate = useNavigate()
     const [name, setName] = useState('')
-    const [selectedSongIds, setSelectedSongIds] = useState([])
-    const [availableSongs, setAvailableSongs] = useState([])
+    const [selectedSongs, setSelectedSongs] = useState([]) // Objects: { songId, title, key, transposition, ... }
     const [loading, setLoading] = useState(true)
 
     useEffect(() => {
@@ -17,15 +17,21 @@ function SetListEditor() {
     const fetchData = async () => {
         setLoading(true)
         try {
-            // Fetch all songs
-            const songsResponse = await axios.get('/api/songs')
-            setAvailableSongs(songsResponse.data)
-
-            // If editing, fetch setlist details
+            // If editing, fetch setlist details with full songs
             if (id) {
                 const setListResponse = await axios.get(`/api/setlists/${id}`)
                 setName(setListResponse.data.name)
-                setSelectedSongIds(setListResponse.data.songIds || [])
+
+                // Fetch full song details which includes transposition
+                const songsResponse = await axios.get(`/api/setlists/${id}/songs`)
+                // Map the DTO response to our local structure
+                // DTO: { song: {...}, transposition: 0 }
+                const mappedSongs = songsResponse.data.map(item => ({
+                    ...item.song, // Flatten song properties (id, title, key, etc)
+                    songId: item.song.id,
+                    transposition: item.transposition
+                }))
+                setSelectedSongs(mappedSongs)
             }
         } catch (error) {
             console.error('Error fetching data:', error)
@@ -36,9 +42,15 @@ function SetListEditor() {
 
     const handleSubmit = async (e) => {
         e.preventDefault()
+        // Map local state to SetListEntry structure expected by backend
+        const songsPayload = selectedSongs.map(s => ({
+            songId: s.songId || s.id, // Fallback for safety
+            transposition: s.transposition || 0
+        }))
+
         const setListData = {
             name,
-            songIds: selectedSongIds
+            songs: songsPayload
         }
 
         try {
@@ -63,18 +75,31 @@ function SetListEditor() {
         }
     }
 
-    const toggleSong = (songId) => {
-        setSelectedSongIds(prev =>
-            prev.includes(songId)
-                ? prev.filter(id => id !== songId)
-                : [...prev, songId]
-        )
+    const toggleSong = (song) => {
+        setSelectedSongs(prev => {
+            const exists = prev.find(s => s.songId === song.id || s.id === song.id)
+            if (exists) {
+                return prev.filter(s => s.songId !== song.id && s.id !== song.id)
+            } else {
+                // Add new song with default 0 transposition
+                return [...prev, { ...song, songId: song.id, transposition: 0 }]
+            }
+        })
+    }
+
+    const updateTransposition = (songId, change) => {
+        setSelectedSongs(prev => prev.map(s => {
+            if (s.songId === songId || s.id === songId) {
+                return { ...s, transposition: (s.transposition || 0) + change }
+            }
+            return s
+        }))
     }
 
     if (loading) return <div className="text-center mt-10">Loading...</div>
 
     return (
-        <div className="max-w-2xl mx-auto glass-panel p-8">
+        <div className="max-w-4xl mx-auto glass-panel p-8 text-left">
             <h2 className="text-3xl font-bold mb-6">{id ? 'Edit Set List' : 'Create New Set List'}</h2>
 
             <form onSubmit={handleSubmit} className="space-y-6">
@@ -89,28 +114,73 @@ function SetListEditor() {
                     />
                 </div>
 
-                <div>
-                    <label className="block text-gray-300 mb-2">Select Songs</label>
-                    <div className="border border-white/10 rounded-lg max-h-96 overflow-y-auto bg-black/20 p-2">
-                        {availableSongs.length === 0 ? (
-                            <p className="text-gray-500 text-center p-4">No songs available. Create some songs first!</p>
-                        ) : (
-                            availableSongs.map(song => (
-                                <div
-                                    key={song.id}
-                                    className={`p-3 rounded-md cursor-pointer mb-1 flex justify-between items-center transition-colors ${selectedSongIds.includes(song.id) ? 'bg-indigo-600/50 border border-indigo-500' : 'hover:bg-white/5'}`}
-                                    onClick={() => toggleSong(song.id)}
-                                >
-                                    <span>{song.title}</span>
-                                    {selectedSongIds.includes(song.id) && <span className="text-indigo-300">✓</span>}
-                                </div>
-                            ))
-                        )}
+                <div className="grid md:grid-cols-2 gap-6">
+                    {/* Left Column: Selection */}
+                    <div>
+                        <label className="block text-gray-300 mb-2">Add Songs</label>
+                        <div className="border border-white/10 rounded-lg max-h-[500px] overflow-y-auto bg-black/20 p-2">
+                            <SongSelectionList
+                                mode="select"
+                                selectedSongIds={selectedSongs.map(s => s.songId || s.id)}
+                                onSongClick={toggleSong}
+                            />
+                        </div>
                     </div>
-                    <p className="text-xs text-gray-400 mt-2">{selectedSongIds.length} songs selected</p>
+
+                    {/* Right Column: Selected & Transposition */}
+                    <div>
+                        <label className="block text-gray-300 mb-2">Selected Songs & Keys</label>
+                        {selectedSongs.length === 0 ? (
+                            <div className="text-gray-500 italic p-4 border border-white/10 rounded-lg bg-black/20 h-[500px] flex items-center justify-center text-center">
+                                Select songs from the list to add them here.
+                            </div>
+                        ) : (
+                            <div className="space-y-2 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar border border-white/10 rounded-lg bg-black/20 p-2">
+                                {selectedSongs.map((song, index) => (
+                                    <div key={song.songId || song.id} className="p-3 bg-white/5 rounded-lg border border-white/5 flex justify-between items-center group">
+                                        <div className="flex-1">
+                                            <span className="font-bold block">{index + 1}. {song.title}</span>
+                                            <span className="text-xs text-gray-400">{song.artist} • Original: {song.key}</span>
+                                        </div>
+
+                                        <div className="flex items-center gap-3">
+                                            <div className="flex items-center bg-black/40 rounded border border-white/10">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => updateTransposition(song.songId || song.id, -1)}
+                                                    className="px-2 py-1 text-gray-400 hover:text-white hover:bg-white/10"
+                                                >
+                                                    -
+                                                </button>
+                                                <span className={`w-8 text-center text-sm font-mono ${(song.transposition || 0) !== 0 ? 'text-indigo-400 font-bold' : 'text-gray-400'}`}>
+                                                    {(song.transposition || 0) > 0 ? '+' : ''}{song.transposition || 0}
+                                                </span>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => updateTransposition(song.songId || song.id, 1)}
+                                                    className="px-2 py-1 text-gray-400 hover:text-white hover:bg-white/10"
+                                                >
+                                                    +
+                                                </button>
+                                            </div>
+
+                                            <button
+                                                type="button"
+                                                onClick={() => toggleSong(song)}
+                                                className="text-gray-500 hover:text-red-400 transition-colors px-2"
+                                            >
+                                                ✕
+                                            </button>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                        <p className="text-xs text-gray-400 mt-2 text-right">{selectedSongs.length} songs selected</p>
+                    </div>
                 </div>
 
-                <div className="flex gap-4 pt-4">
+                <div className="flex gap-4 pt-4 border-t border-white/10">
                     <button type="submit" className="btn-primary flex-1">
                         {id ? 'Update Set List' : 'Create Set List'}
                     </button>

@@ -73,23 +73,36 @@ function SetListViewer() {
             </div>
 
             <div className="space-y-12 pb-20">
-                {songs.map((song, index) => (
-                    <div key={song.id} className="glass-panel p-8 relative">
-                        <div className="absolute top-4 right-4 text-gray-500 font-mono text-xl opacity-20">#{index + 1}</div>
-                        <div className="border-b border-white/10 pb-4 mb-6">
-                            <h3 className="text-2xl font-bold">{song.title}</h3>
-                            <p className="text-indigo-300">{song.artist}</p>
-                            <div className="flex gap-4 mt-2 text-xs text-gray-400 font-mono">
-                                {song.key && <span>Key: {song.key}</span>}
-                                {song.timeSignature && <span>Time: {song.timeSignature}</span>}
-                                {song.rhythm && <span>Rhythm: {song.rhythm}</span>}
+                {songs.map((item, index) => {
+                    const { song, transposition, transposedLyrics } = item;
+                    // Fallback for safety if structure is different
+                    const actualSong = song || item;
+                    const lyricsToRender = transposedLyrics || actualSong.lyrics;
+                    const transVal = transposition || 0;
+
+                    return (
+                        <div key={actualSong.id} className="glass-panel p-8 relative">
+                            <div className="absolute top-4 right-4 text-gray-500 font-mono text-xl opacity-20">#{index + 1}</div>
+                            <div className="border-b border-white/10 pb-4 mb-6">
+                                <h3 className="text-2xl font-bold">{actualSong.title}</h3>
+                                <p className="text-indigo-300">{actualSong.artist}</p>
+                                <div className="flex gap-4 mt-2 text-xs text-gray-400 font-mono items-center">
+                                    {actualSong.key && <span>Original Key: {actualSong.key}</span>}
+                                    {transVal !== 0 && (
+                                        <span className={`px-2 py-0.5 rounded ${transVal > 0 ? 'bg-indigo-900 text-indigo-200' : 'bg-pink-900 text-pink-200'}`}>
+                                            Transposed {transVal > 0 ? '+' : ''}{transVal}
+                                        </span>
+                                    )}
+                                    {actualSong.timeSignature && <span>Time: {actualSong.timeSignature}</span>}
+                                    {actualSong.rhythm && <span>Rhythm: {actualSong.rhythm}</span>}
+                                </div>
+                            </div>
+                            <div className="font-mono text-lg whitespace-pre-wrap">
+                                {renderLyrics(lyricsToRender)}
                             </div>
                         </div>
-                        <div className="font-mono text-lg whitespace-pre-wrap">
-                            {renderLyrics(song.lyrics)}
-                        </div>
-                    </div>
-                ))}
+                    )
+                })}
 
                 {songs.length === 0 && (
                     <div className="text-center py-20 text-gray-500">

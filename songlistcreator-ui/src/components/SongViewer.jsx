@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import axios from 'axios'
+import AddToSetListModal from './AddToSetListModal'
 
 function SongViewer() {
     const { id } = useParams()
@@ -8,6 +9,7 @@ function SongViewer() {
     const [song, setSong] = useState(null)
     const [transpose, setTranspose] = useState(0)
     const [transposedLyrics, setTransposedLyrics] = useState('')
+    const [showAddModal, setShowAddModal] = useState(false)
     const [loading, setLoading] = useState(true)
 
     useEffect(() => {
@@ -75,7 +77,7 @@ function SongViewer() {
     if (loading || !song) return <div>Loading...</div>
 
     return (
-        <div className="max-w-4xl mx-auto text-left">
+        <div className="max-w-4xl mx-auto text-left relative">
             <div className="mb-6 flex justify-between items-start">
                 <div>
                     <h1 className="text-4xl font-bold mb-2">{song.title}</h1>
@@ -93,6 +95,12 @@ function SongViewer() {
                 </div>
 
                 <div className="flex gap-2">
+                    <button
+                        onClick={() => setShowAddModal(true)}
+                        className="px-4 py-2 bg-indigo-600/20 hover:bg-indigo-600/40 text-indigo-300 border border-indigo-500/30 rounded transition-colors"
+                    >
+                        + Add to Set List
+                    </button>
                     <Link to={`/edit/${id}`} className="px-4 py-2 bg-gray-700 rounded hover:bg-gray-600">Edit</Link>
                     <button onClick={handleDelete} className="px-4 py-2 bg-red-900/50 hover:bg-red-900/80 rounded text-red-200">Delete</button>
                 </div>
@@ -108,6 +116,8 @@ function SongViewer() {
             <div className="glass-panel font-mono text-lg whitespace-pre-wrap p-8 bg-black/40">
                 {renderLyrics(song.lyrics)}
             </div>
+
+            {showAddModal && <AddToSetListModal songId={song.id} onClose={() => setShowAddModal(false)} />}
         </div>
     )
 }

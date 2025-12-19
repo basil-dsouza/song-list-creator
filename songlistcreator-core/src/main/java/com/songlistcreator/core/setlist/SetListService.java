@@ -2,6 +2,7 @@ package com.songlistcreator.core.setlist;
 
 import com.songlistcreator.core.song.SongRepository;
 import lombok.RequiredArgsConstructor;
+import com.songlistcreator.core.setlist.SetListEntry;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -15,8 +16,8 @@ public class SetListService {
 
     public SetList createSetList(SetList setList, String userId) {
         setList.setUserId(userId);
-        if (setList.getSongIds() == null) {
-            setList.setSongIds(new ArrayList<>());
+        if (setList.getSongs() == null) {
+            setList.setSongs(new ArrayList<>());
         }
         return setListRepository.save(setList);
     }
@@ -38,9 +39,9 @@ public class SetListService {
                 .filter(sl -> sl.getUserId().equals(userId))
                 .map(existing -> {
                     existing.setName(updated.getName());
-                    // Update songs if provided, otherwise keep existing
-                    if (updated.getSongIds() != null) {
-                        existing.setSongIds(updated.getSongIds());
+                    // Update songs if provided
+                    if (updated.getSongs() != null) {
+                        existing.setSongs(updated.getSongs());
                     }
                     return setListRepository.save(existing);
                 });
@@ -50,10 +51,17 @@ public class SetListService {
         return setListRepository.findById(setListId)
                 .filter(sl -> sl.getUserId().equals(userId))
                 .map(setList -> {
-                    // Verify song exists and belongs to user (optional strictly, but good practice)
+                    // Verify song exists
                     songRepository.findById(songId).ifPresent(song -> {
-                        if (!setList.getSongIds().contains(songId)) {
-                            setList.getSongIds().add(songId);
+                        if (setList.getSongs() == null) {
+                            setList.setSongs(new ArrayList<>());
+                        }
+                        // Check if already in list (optional, but prevents dupes if desired)
+                        boolean exists = setList.getSongs().stream()
+                                .anyMatch(entry -> entry.getSongId().equals(songId));
+
+                        if (!exists) {
+                            setList.getSongs().add(new SetListEntry(songId, 0));
                         }
                     });
                     return setListRepository.save(setList);
@@ -64,21 +72,39 @@ public class SetListService {
         return setListRepository.findById(setListId)
                 .filter(sl -> sl.getUserId().equals(userId))
                 .map(setList -> {
-                    setList.getSongIds().remove(songId);
+                    if (setList.getSongs() != null) {
+                        setList.getSongs().removeIf(entry -> entry.getSongId().equals(songId));
+                    }
                     return setListRepository.save(setList);
                 });
     }
 
-    public List<com.songlistcreator.core.song.Song> getSongsInSetList(Long id) {
+    // New wrapper class for response
+    @lombok.Data
+    @lombok.AllArgsConstructor
+    public static class SetListSongDTO {
+        private com.songlistcreator.core.song.Song song;
+        private int transposition;
+        private String transposedLyrics;
+    }
+
+    // Updated to return DTOs
+    public List<SetListSongDTO> getSongsInSetList(Long id) {
+        com.songlistcreator.core.song.Transposer transposer = new com.songlistcreator.core.song.Transposer();
         return setListRepository.findById(id)
                 .map(setList -> {
-                    List<com.songlistcreator.core.song.Song> songs = new ArrayList<>();
-                    if (setList.getSongIds() != null) {
-                        for (Long songId : setList.getSongIds()) {
-                            songRepository.findById(songId).ifPresent(songs::add);
+                    List<SetListSongDTO> result = new ArrayList<>();
+                    if (setList.getSongs() != null) {
+                        for (SetListEntry entry : setList.getSongs()) {
+                            songRepository.findById(entry.getSongId())
+                                    .ifPresent(song -> {
+                                        String transposed = transposer.transpose(song.getLyrics(), song.getKey(),
+                                                entry.getTransposition());
+                                        result.add(new SetListSongDTO(song, entry.getTransposition(), transposed));
+                                    });
                         }
                     }
-                    return songs;
+                    return result;
                 })
                 .orElse(new ArrayList<>());
     }
